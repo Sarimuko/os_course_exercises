@@ -80,6 +80,65 @@ SETGATE(intr, 1,2,3,0);
   - ##### [[IA-32 Intel Architecture Software Developer's Manuals](http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html)]
 
 
+以下这段汇编代码来自于trap.s，用于发生自陷时从用户态跳转到内核态和处理完中断之后从内核态跳转到用户态。
+  ```
+  #include <memlayout.h>
+
+  # vectors.S sends all traps here.
+  .text
+  .globl __alltraps
+  __alltraps:
+      # push registers to build a trap frame
+      # therefore make the stack look like a struct trapframe
+
+      # 将段寄存器压入栈中
+      pushl %ds
+      pushl %es
+      pushl %fs
+      pushl %gs
+
+      #将所有通用寄存器压入栈中
+      pushal
+
+      # load GD_KDATA into %ds and %es to set up data segments for kernel
+      # 设置段寄存器，为内核态做准备
+      movl $GD_KDATA, %eax
+      movw %ax, %ds
+      movw %ax, %es
+
+      # push %esp to pass a pointer to the trapframe as an argument to trap()
+      # 将当前栈顶位置（trapframe的起始位置）压入栈顶，作为trap函数调用的参数
+      pushl %esp
+
+      # call trap(tf), where tf=%esp
+      # 调用函数trap，进行trap处理
+      call trap
+
+      # pop the pushed stack pointer
+      # 将压入的参数弹出，开始进行trap处理善后工作
+      popl %esp
+
+      # return falls through to trapret...
+  .globl __trapret
+  __trapret:
+      # restore registers from stack
+      # 恢复所有通用寄存器
+      popal
+
+      # restore %ds, %es, %fs and %gs
+      # 恢复所有段寄存器
+      popl %gs
+      popl %fs
+      popl %es
+      popl %ds
+
+      # get rid of the trap number and error code
+      # 将trap时压入栈中的trap number 和 error code弹出，返回用户态
+      addl $0x8, %esp
+      iret
+
+  ```
+
 请在rcore中找一段你认为难度适当的RV汇编代码，尝试解释其含义。
 
 #### 练习二
