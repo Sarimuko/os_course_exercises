@@ -147,6 +147,36 @@ intr是unsigned类型，实际上是截取最低32位，intr = 0x2003
 
 请在rcore中找一段你认为难度适当的RV汇编代码，尝试解释其含义。
 
+```
+    .section .text.entry
+    .globl _start
+_start:
+    add t0, a0, 1
+    slli t0, t0, 16
+
+    # t0里面放的是bootstack的大小
+    
+    lui sp, %hi(bootstack)
+    addi sp, sp, %lo(bootstack)
+    add sp, sp, t0
+
+    # 将sp置为bootstack的栈顶
+
+    call rust_main
+    # 启动os
+
+    .section .bss.stack
+    .align 12  #PGSHIFT
+    .global bootstack
+
+    # 设置bootstack空间
+bootstack:
+    .space 4096 * 16 * 8
+    .global bootstacktop
+bootstacktop:
+
+```
+
 #### 练习二
 
 宏定义和引用在内核代码中很常用。请枚举ucore或rcore中宏定义的用途，并举例描述其含义。
