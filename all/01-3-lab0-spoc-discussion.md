@@ -196,4 +196,3 @@ bootstacktop:
  - [v9 cpu architecture](https://github.com/chyyuu/os_tutorial_lab/blob/master/v9_computer/docs/v9_computer.md)
  - [RISC-V cpu architecture](http://www.riscvbook.com/chinese/)
  - [OS相关经典论文](https://github.com/chyyuu/aos_course_info/blob/master/readinglist.md)
->>>>>>> 63b87d9ea737d578dcf4c134125b65f2d85a8557
