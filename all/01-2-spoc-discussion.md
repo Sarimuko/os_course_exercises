@@ -79,3 +79,13 @@ C语言可以直接并且可控地被编译成汇编语言，因此更加适合�
   - 输入的字符并输出你输入的字符
   - 请编写一个小程序，在RV下，能够产生各种异常/中断
   - 请编写一个小程序，在RV下，能够统计并显示内存大小
+
+## 参考资料
+ - [Intel格式和AT&T格式汇编区别](http://www.cnblogs.com/hdk1993/p/4820353.html)
+ - [x86汇编指令集  ](http://hiyyp1234.blog.163.com/blog/static/67786373200981811422948/)
+ - [PC Assembly Language, Paul A. Carter, November 2003.](https://pdos.csail.mit.edu/6.828/2016/readings/pcasm-book.pdf)
+ - [*Intel 80386 Programmer's Reference Manual*, 1987](https://pdos.csail.mit.edu/6.828/2016/readings/i386/toc.htm)
+ - [IA-32 Intel Architecture Software Developer's Manuals](http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html)
+ - [v9 cpu architecture](https://github.com/chyyuu/os_tutorial_lab/blob/master/v9_computer/docs/v9_computer.md)
+ - [RISC-V cpu architecture](http://www.riscvbook.com/chinese/)
+ - [OS相关经典论文](https://github.com/chyyuu/aos_course_info/blob/master/readinglist.md)
