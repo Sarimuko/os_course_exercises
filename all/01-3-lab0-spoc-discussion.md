@@ -39,12 +39,13 @@
     unsigned gd_off_31_16 : 16;        // high bits of offset in segment
  };
 ```
+我认为":"后面的数字是数字表示位数的意思
 
 - 对于如下的代码段，
 
 ```
 #define SETGATE(gate, istrap, sel, off, dpl) {            \
-    (gate).gd_off_15_0 = (uint32_t)(off) & 0xffff;        \
+    (gate).gd_off_15_0 = (uint32_t)(off) & 0xffff;        \ //取off的低16位
     (gate).gd_ss = (sel);                                \
     (gate).gd_args = 0;                                    \
     (gate).gd_rsv1 = 0;                                    \
@@ -52,7 +53,7 @@
     (gate).gd_s = 0;                                    \
     (gate).gd_dpl = (dpl);                                \
     (gate).gd_p = 1;                                    \
-    (gate).gd_off_31_16 = (uint32_t)(off) >> 16;        \
+    (gate).gd_off_31_16 = (uint32_t)(off) >> 16;        \ //取off的高16位
 }
 ```
 如果在其他代码段中有如下语句，
@@ -62,6 +63,11 @@ intr=8;
 SETGATE(intr, 1,2,3,0);
 ```
 请问执行上述指令后， intr的值是多少？
+执行上述指令后，从intr开始的64bit从高位开始为
+0x00000F0000020003
+
+intr是unsigned类型，实际上是截取最低32位，intr = 0x2003
+
 
 ### 课堂实践练习
 
@@ -148,3 +154,8 @@ SETGATE(intr, 1,2,3,0);
  > 利用宏进行复杂数据结构中的数据访问；
  > 利用宏进行数据类型转换；如 to_struct, 
  > 常用功能的代码片段优化；如  ROUNDDOWN, SetPageDirty
+
+ > 用于翻译汇编代码；如SEG_ASM
+ > 用于定义常量；
+ > 用于复杂系统函数的简写命名；如va_start
+
