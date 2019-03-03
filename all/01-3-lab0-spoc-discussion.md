@@ -189,6 +189,9 @@ bootstacktop:
 ## 问答题
 
 #### 在配置实验环境时，你遇到了那些问题，是如何解决的。
+编译相关问题都很好地解决了，但是对于make debug由于mac 下没有gnome-terminal而失败。
+
+没有解决，网络上的解决方案是用xterm进行替代，但是我本地的尝试并不可行。
 
 ## 参考资料
  - [Intel格式和AT&T格式汇编区别](http://www.cnblogs.com/hdk1993/p/4820353.html)
