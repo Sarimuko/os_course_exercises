@@ -90,7 +90,7 @@ UEFI希望能够实现所有平台一致的系统启动，而BIOS需要考虑更
 系统调用可异步可同步
 
 - 以ucore/rcore lab8的answer为例，ucore的系统调用有哪些？大致的功能分类有哪些？
-	- 系统控制，进程管理
+	- 进程管理
    		- sys_exit
     	- sys_fork
     	- sys_wait
@@ -101,19 +101,19 @@ UEFI希望能够实现所有平台一致的系统启动，而BIOS需要考虑更
     	- sys_sleep
     - I/O
     	- sys_putc
-    	- sys_read
-    	- sys_write
-    	- sys_open
-    	- sys_close
-    - access
+    - 内存管理
     	- sys_pgdir
-    	- sys_getcwd
-    	- sys_getdirentry
     - 文件管理
     	- sys_fstat
     	- sys_fsync
     	- sys_seek
     	- sys_dup
+    	- sys_getcwd
+    	- sys_getdirentry
+    	- sys_read
+    	- sys_write
+    	- sys_open
+    	- sys_close
     - 其他
     	- sys_gettime
     	- sys_lab6_set_priority
@@ -127,14 +127,123 @@ UEFI希望能够实现所有平台一致的系统启动，而BIOS需要考虑更
 
 ## 3.5 ucore/rcore系统调用分析 （扩展练习，可选）
 -  基于实验八的代码分析ucore的系统调用实现，说明指定系统调用的参数和返回值的传递方式和存放位置信息，以及内核中的系统调用功能实现函数。
+```
+void
+syscall(void) {
+    struct trapframe *tf = current->tf;
+    uint32_t arg[5];
+    int num = tf->tf_regs.reg_eax;
+    if (num >= 0 && num < NUM_SYSCALLS) {
+        if (syscalls[num] != NULL) {
+            arg[0] = tf->tf_regs.reg_edx;
+            arg[1] = tf->tf_regs.reg_ecx;
+            arg[2] = tf->tf_regs.reg_ebx;
+            arg[3] = tf->tf_regs.reg_edi;
+            arg[4] = tf->tf_regs.reg_esi;
+            tf->tf_regs.reg_eax = syscalls[num](arg);
+            return ;
+        }
+    }
+    print_trapframe(tf);
+    panic("undefined syscall %d, pid = %d, name = %s.\n",
+            num, current->pid, current->name);
+}
+```
+系统调用的触发方式和中断，异常相同，都通过trap进入。中断号被放在%eax中，并在进入trap处理时被放入到中断帧中。返回值也放在%eax中。
 - 以ucore/rcore lab8的answer为例，分析ucore 应用的系统调用编写和含义。
+用户态中，调用系统调用调用的函数为
+```
+static inline int
+syscall(int num, ...) {
+    va_list ap;
+    va_start(ap, num);
+    uint32_t a[MAX_ARGS];
+    int i, ret;
+    for (i = 0; i < MAX_ARGS; i ++) {
+        a[i] = va_arg(ap, uint32_t);
+    }
+    va_end(ap);
+
+    asm volatile (
+        "int %1;"
+        : "=a" (ret)
+        : "i" (T_SYSCALL),
+          "a" (num),
+          "d" (a[0]),
+          "c" (a[1]),
+          "b" (a[2]),
+          "D" (a[3]),
+          "S" (a[4])
+        : "cc", "memory");
+    return ret;
+}
+```
+直接被汇编成int指令，并指定了系统调用参数保存的地址。
+中断被触发后，操作系统跳转到中断处理例程，完成现场保护等过程后进入到内核态部分
+```
+void
+trap(struct trapframe *tf) {
+    // dispatch based on what type of trap occurred
+    // used for previous projects
+    if (current == NULL) {
+        trap_dispatch(tf);
+    }
+    else {
+        // keep a trapframe chain in stack
+        struct trapframe *otf = current->tf;
+        current->tf = tf;
+    
+        bool in_kernel = trap_in_kernel(tf);
+    
+        trap_dispatch(tf);
+    
+        current->tf = otf;
+        if (!in_kernel) {
+            if (current->flags & PF_EXITING) {
+                do_exit(-E_KILLED);
+            }
+            if (current->need_resched) {
+                schedule();
+            }
+        }
+    }
+}
+```
+首先trap进行初步处理，然后进入到trap_dispatch()，然后进入到syscall()
+```
+void
+syscall(void) {
+    struct trapframe *tf = current->tf;
+    uint32_t arg[5];
+    int num = tf->tf_regs.reg_eax;
+    if (num >= 0 && num < NUM_SYSCALLS) {
+        if (syscalls[num] != NULL) {
+            arg[0] = tf->tf_regs.reg_edx;
+            arg[1] = tf->tf_regs.reg_ecx;
+            arg[2] = tf->tf_regs.reg_ebx;
+            arg[3] = tf->tf_regs.reg_edi;
+            arg[4] = tf->tf_regs.reg_esi;
+            tf->tf_regs.reg_eax = syscalls[num](arg);
+            return ;
+        }
+    }
+    print_trapframe(tf);
+    panic("undefined syscall %d, pid = %d, name = %s.\n",
+            num, current->pid, current->name);
+}
+```
+这里读取出来被保存的栈帧内容，并实际上执行syscall操作。
+
 - 以ucore/rcore lab8的answer为例，尝试修改并运行ucore OS kernel代码，使其具有类似Linux应用工具`strace`的功能，即能够显示出应用程序发出的系统调用，从而可以分析ucore应用的系统调用执行过程。
 
  
 ## 3.6 请分析函数调用和系统调用的区别
 - 系统调用与函数调用的区别是什么？
- 	系统调用是操作系统提供给用户程序的接口，工作在内核态。而函数调用是用户程序中进行的自定义接口，运行在用户态。
+ 	- 系统调用是操作系统提供给用户程序的接口，工作在内核态。而函数调用是用户程序中进行的自定义接口，运行在用户态。
+ 	- 系统调用使用int和iret，函数调用使用call和ret
 - 通过分析x86中函数调用规范以及`int`、`iret`、`call`和`ret`的指令准确功能和调用代码，比较x86中函数调用与系统调用的堆栈操作有什么不同？
+	- int 会进入内核态，将中断号压入栈中，然后调用__all_traps形成中断帧，然后调用trap()根据中断帧进行系统调用处理。
+	- iret 会从内核态转换到用户态
 - 通过分析RV中函数调用规范以及`ecall`、`eret`、`jal`和`jalr`的指令准确功能和调用代码，比较x86中函数调用与系统调用的堆栈操作有什么不同？
 
 
